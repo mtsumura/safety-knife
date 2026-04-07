@@ -1,9 +1,9 @@
 DATA_DIR = 'data/bronze'
 SILVER_DATA_DIR = 'data/silver'
-ticker_symbol = "CSU.TO"
+ticker_symbol = "VET.TO"
 #   | Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
 #   | Default: 1mo
-#   | Can combine with start/end e.g. end = start + period
+#   | Can combine with start/end e.g. end = start + periods
 # interval : str
 #   | Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
 #   | Intraday data cannot extend last 60 days

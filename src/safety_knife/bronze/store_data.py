@@ -31,7 +31,7 @@ def save_to_delta(spark_df, path, partition=None):
         None
     """
     # Save the spark dataframe as a delta lake table
-    s =  spark_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true")
+    s =  spark_df.write.format("delta").mode("append").option("overwriteSchema", "true")
     s.partitionBy(partition).save(path) if partition is not None else s.save(path)
 
 
@@ -58,3 +58,32 @@ def show_table_history(output_path, spark=None):
     delta_table = DeltaTable.forPath(spark, output_path)
     delta_table.history().show(truncate=False)
     print(delta_table.detail())
+
+from delta.tables import DeltaTable
+from pyspark.sql import functions as F
+
+def upsert_to_delta(spark, incoming_df, delta_path: str):
+    target = DeltaTable.forPath(spark, delta_path)
+
+    (target.alias("t")
+        .merge(
+            source=incoming_df.alias("s"),
+            condition="t.symbol = s.symbol",
+        )
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute()
+    )
+
+def upsert_historicals_by_path(spark, incoming_df, delta_path: str):
+    target = DeltaTable.forPath(spark, delta_path)
+
+    (target.alias("t")
+        .merge(
+            source=incoming_df.alias("s"),
+            condition="t.Symbol = s.Symbol AND t.Date = s.Date",
+        )
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute()
+    )

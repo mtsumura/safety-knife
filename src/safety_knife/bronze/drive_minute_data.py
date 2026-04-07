@@ -17,3 +17,7 @@ save_to_delta(spark_df, path=output_path_minute, partition="Symbol")
 
 df0 = load_from_delta(output_path_minute, spark=spark)
 df0.show()
+
+spark.sql("""
+    SELECT * FROM yfinance.minute_historicals
+""").show()
