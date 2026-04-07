@@ -8,10 +8,10 @@ silver_schema = "dv_yfinance"
 print(spark.conf.get("spark.sql.catalogImplementation"))
 print(spark.conf.get("spark.sql.warehouse.dir"))
 
-# spark.sql(
-#     f"""
-#     CREATE SCHEMA IF NOT EXISTS {silver_schema}
-#     """)
+spark.sql(
+    f"""
+    CREATE SCHEMA IF NOT EXISTS {silver_schema}
+    """)
 
 # spark.sql(f"""
 #           DROP TABLE {silver_schema}.hub_instrument
@@ -85,48 +85,48 @@ USING DELTA
 LOCATION '{silver_output_path}/sat_company_info';
 """)
 
-spark.sql(f"""
-CREATE TABLE IF NOT EXISTS dv_yfinance.hub_time (
-  Time_HK           STRING NOT NULL,           -- hash(DateTime)
-  DateTime          TIMESTAMP NOT NULL,         -- business key
-  Load_DTS          TIMESTAMP NOT NULL,
-  Record_Source     STRING NOT NULL
-)
-USING DELTA
-LOCATION '{silver_output_path}/hub_time';
-""")
+# spark.sql(f"""
+# CREATE TABLE IF NOT EXISTS dv_yfinance.hub_time (
+#   Time_HK           STRING NOT NULL,           -- hash(DateTime)
+#   DateTime          TIMESTAMP NOT NULL,         -- business key
+#   Load_DTS          TIMESTAMP NOT NULL,
+#   Record_Source     STRING NOT NULL
+# )
+# USING DELTA
+# LOCATION '{silver_output_path}/hub_time';
+# """)
 
-spark.sql(f"""
-CREATE TABLE IF NOT EXISTS dv_yfinance.link_instrument_minute (
-  Instrument_Minute_LK STRING NOT NULL,    -- hash(Symbol, DateTime)
-  Instrument_HK        STRING NOT NULL,    -- → hub_instrument
-  Time_HK              STRING NOT NULL,    -- → hub_time
-  Load_DTS             TIMESTAMP NOT NULL,
-  Record_Source        STRING NOT NULL
-)
-USING DELTA
-LOCATION '{silver_output_path}/link_instrument_minute';
-""")
+# spark.sql(f"""
+# CREATE TABLE IF NOT EXISTS dv_yfinance.link_instrument_minute (
+#   Instrument_Minute_LK STRING NOT NULL,    -- hash(Symbol, DateTime)
+#   Instrument_HK        STRING NOT NULL,    -- → hub_instrument
+#   Time_HK              STRING NOT NULL,    -- → hub_time
+#   Load_DTS             TIMESTAMP NOT NULL,
+#   Record_Source        STRING NOT NULL
+# )
+# USING DELTA
+# LOCATION '{silver_output_path}/link_instrument_minute';
+# """)
 
-spark.sql(f"""
-CREATE TABLE IF NOT EXISTS dv_yfinance.sat_instrument_minute_prices (
-  Instrument_Minute_LK STRING   NOT NULL,  -- parent key
-  Open                 DOUBLE,
-  High                 DOUBLE,
-  Low                  DOUBLE,
-  Close                DOUBLE,
-  Volume               BIGINT,
-  Dividends            DOUBLE,
-  Stock_Splits         DOUBLE,
-  Hash_Diff            STRING,
-  Load_DTS             TIMESTAMP NOT NULL,
-  Effective_DTS        TIMESTAMP NOT NULL,
-  End_DTS              TIMESTAMP,
-  Record_Source        STRING NOT NULL
-)
-USING DELTA
-LOCATION '{silver_output_path}/sat_instrument_minute_prices';
-""")
+# spark.sql(f"""
+# CREATE TABLE IF NOT EXISTS dv_yfinance.sat_instrument_minute_prices (
+#   Instrument_Minute_LK STRING   NOT NULL,  -- parent key
+#   Open                 DOUBLE,
+#   High                 DOUBLE,
+#   Low                  DOUBLE,
+#   Close                DOUBLE,
+#   Volume               BIGINT,
+#   Dividends            DOUBLE,
+#   Stock_Splits         DOUBLE,
+#   Hash_Diff            STRING,
+#   Load_DTS             TIMESTAMP NOT NULL,
+#   Effective_DTS        TIMESTAMP NOT NULL,
+#   End_DTS              TIMESTAMP,
+#   Record_Source        STRING NOT NULL
+# )
+# USING DELTA
+# LOCATION '{silver_output_path}/sat_instrument_minute_prices';
+# """)
 
 
 spark.sql(f"""
@@ -153,18 +153,18 @@ spark.sql(f"""
     SELECT * FROM {silver_schema}.sat_company_info limit 10
 """).show()
 
-spark.sql(f"""
-    SELECT 
-    t.DateTime,
-    i.Symbol,
-    p.Open,
-    p.Close,
-    p.High - p.Low AS Intraday_Range
-    FROM dv_yfinance.link_instrument_minute lim
-    JOIN dv_yfinance.sat_instrument_minute_prices p 
-        ON lim.Instrument_Minute_LK = p.Instrument_Minute_LK AND p.End_DTS IS NULL
-    JOIN dv_yfinance.hub_time t ON lim.Time_HK = t.Time_HK
-    JOIN dv_yfinance.hub_instrument i ON lim.Instrument_HK = i.Instrument_HK
-    WHERE DATE(t.DateTime) > '2026-03-01'
-    ORDER BY t.DateTime;
-""").show() 
+# spark.sql(f"""
+#     SELECT 
+#     t.DateTime,
+#     i.Symbol,
+#     p.Open,
+#     p.Close,
+#     p.High - p.Low AS Intraday_Range
+#     FROM dv_yfinance.link_instrument_minute lim
+#     JOIN dv_yfinance.sat_instrument_minute_prices p 
+#         ON lim.Instrument_Minute_LK = p.Instrument_Minute_LK AND p.End_DTS IS NULL
+#     JOIN dv_yfinance.hub_time t ON lim.Time_HK = t.Time_HK
+#     JOIN dv_yfinance.hub_instrument i ON lim.Instrument_HK = i.Instrument_HK
+#     WHERE DATE(t.DateTime) > '2026-03-01'
+#     ORDER BY t.DateTime;
+# """).show() 

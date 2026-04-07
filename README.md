@@ -210,39 +210,152 @@ graph LR
 The warehouse supports both **daily** and **minute-level** analysis through a shared hub-and-spoke model:
 
 ```mermaid
+graph TB
+  %% Improve readability on light backgrounds (force dark text).
+  %% Mermaid's `style` supports `color` for node text.
+  subgraph Bronze["🟫 Bronze (raw Delta tables)"]
+    Bday["yfinance.historicals<br/>(daily OHLCV + div/splits)"]
+    Bmin["yfinance.minute_historicals<br/>(minute OHLCV)"]
+    Bco["yfinance.company<br/>(company metadata)"]
+  end
+
+  subgraph Stage["🧪 Stage (derive hash keys, enforce types)"]
+    StgDay["stg_daily<br/>Instrument_HK, Calendar_HK, Instrument_Day_LK"]
+    StgMin["stg_minute<br/>Instrument_HK, Time_HK, Instrument_Minute_LK"]
+    StgCo["stg_company<br/>Instrument_HK + Hash_Diff"]
+  end
+
+  subgraph Vault["🟦 Silver / Data Vault (dv_yfinance)"]
+    HI["hub_instrument<br/>(Symbol)"]
+    HC["hub_calendar<br/>(Date)"]
+    HT["hub_time<br/>(DateTime)"]
+
+    LD["link_instrument_day<br/>(Instrument↔Date)"]
+    LM["link_instrument_minute<br/>(Instrument↔DateTime)"]
+
+    SD["sat_instrument_day_prices<br/>(on Instrument_Day_LK)"]
+    SM["sat_instrument_minute_prices<br/>(on Instrument_Minute_LK)"]
+    SC["sat_company_info<br/>(on Instrument_HK, SCD2)"]
+  end
+
+  Bday --> StgDay
+  Bmin --> StgMin
+  Bco --> StgCo
+
+  StgDay --> HI
+  StgDay --> HC
+  StgDay --> LD
+  LD --> SD
+  LD --> HI
+  LD --> HC
+
+  StgMin --> HI
+  StgMin --> HT
+  StgMin --> LM
+  LM --> SM
+  LM --> HI
+  LM --> HT
+
+  StgCo --> HI
+  HI --> SC
+
+  style Bronze fill:#fff3e0,color:#111
+  style Stage fill:#f3e5f5,color:#111
+  style Vault fill:#e3f2fd,color:#111
+  style Bday fill:#fff3e0,color:#111
+  style Bmin fill:#fff3e0,color:#111
+  style Bco fill:#fff3e0,color:#111
+  style StgDay fill:#f3e5f5,color:#111
+  style StgMin fill:#f3e5f5,color:#111
+  style StgCo fill:#f3e5f5,color:#111
+  style HI fill:#e1bee7,color:#111
+  style HC fill:#e1bee7,color:#111
+  style HT fill:#e1bee7,color:#111
+  style LD fill:#bbdefb,color:#111
+  style LM fill:#bbdefb,color:#111
+  style SD fill:#ffe0b2,color:#111
+  style SM fill:#ffe0b2,color:#111
+  style SC fill:#ffe0b2,color:#111
+
+  %% Arrow color-coding (keep mental model simple):
+  %% - Bronze → Stage: muted gray
+  %% - Stage → Vault objects (load): blue
+  %% - Vault relationships (keys/parents): dashed purple
+  linkStyle 0 stroke:#616161,stroke-width:2px,color:#111
+  linkStyle 1 stroke:#616161,stroke-width:2px,color:#111
+  linkStyle 2 stroke:#616161,stroke-width:2px,color:#111
+
+  linkStyle 3 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 4 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 5 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 6 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 9 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 10 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 11 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 12 stroke:#1565c0,stroke-width:2px,color:#111
+  linkStyle 15 stroke:#1565c0,stroke-width:2px,color:#111
+
+  linkStyle 7 stroke:#6a1b9a,stroke-width:2px,stroke-dasharray:4 3,color:#111
+  linkStyle 8 stroke:#6a1b9a,stroke-width:2px,stroke-dasharray:4 3,color:#111
+  linkStyle 13 stroke:#6a1b9a,stroke-width:2px,stroke-dasharray:4 3,color:#111
+  linkStyle 14 stroke:#6a1b9a,stroke-width:2px,stroke-dasharray:4 3,color:#111
+  linkStyle 16 stroke:#6a1b9a,stroke-width:2px,stroke-dasharray:4 3,color:#111
+```
+
+### Simplified concept-only hub/link/satellite diagram
+
+This version intentionally hides Bronze/Stage details and shows only the **Data Vault relationships**. The key idea is:
+- **Hubs** store stable business keys (Instrument, Date, DateTime)
+- **Links** connect hubs at a specific grain (Instrument↔Day, Instrument↔Minute)
+- **Satellites** store descriptive attributes, versioned over time (SCD2 where needed)
+
+```mermaid
 graph LR
-    subgraph Daily["📊 Daily Analysis"]
-        D1["Bronze:<br/>historicals"]
-        D2["link_instrument_day"]
-        D3["sat_instrument_day_prices"]
-    end
-    
-    subgraph Shared["🔑 Shared Business Keys"]
-        S["hub_instrument"]
-        S2["Companies & Metadata"]
-    end
-    
-    subgraph Minute["⏰ Minute Analysis"]
-        M1["Bronze:<br/>minute_historicals"]
-        M2["link_instrument_minute"]
-        M3["sat_instrument_minute_prices"]
-    end
-    
-    D1 --> D2 --> D3
-    M1 --> M2 --> M3
-    D2 --> S
-    M2 --> S
-    S2 --> D2
-    S2 --> M2
-    
-    style S fill:#e1bee7
-    style S2 fill:#e1bee7
-    style D1 fill:#fff3e0
-    style D2 fill:#bbdefb
-    style D3 fill:#ffe0b2
-    style M1 fill:#fff3e0
-    style M2 fill:#64b5f6
-    style M3 fill:#ffcc80
+  %% Shared business keys (Hubs)
+  HI["hub_instrument<br/>(Symbol)"]
+  HC["hub_calendar<br/>(Date)"]
+  HT["hub_time<br/>(DateTime)"]
+
+  %% Daily grain
+  LD["link_instrument_day<br/>(Instrument↔Date)"]
+  SD["sat_instrument_day_prices<br/>(OHLCV + div/splits)"]
+
+  %% Minute grain
+  LM["link_instrument_minute<br/>(Instrument↔DateTime)"]
+  SM["sat_instrument_minute_prices<br/>(OHLCV + div/splits)"]
+
+  %% Company metadata hangs off the Instrument hub (not a separate hub)
+  SC["sat_company_info<br/>(metadata, SCD2)"]
+
+  %% Relationships (minimal arrows)
+  HI --> LD
+  HC --> LD
+  LD --> SD
+
+  HI --> LM
+  HT --> LM
+  LM --> SM
+
+  HI --> SC
+
+  %% Styling: light fills + dark text
+  style HI fill:#e1bee7,color:#111
+  style HC fill:#e1bee7,color:#111
+  style HT fill:#e1bee7,color:#111
+  style LD fill:#bbdefb,color:#111
+  style LM fill:#bbdefb,color:#111
+  style SD fill:#ffe0b2,color:#111
+  style SM fill:#ffe0b2,color:#111
+  style SC fill:#ffe0b2,color:#111
+
+  %% Arrow styling: make relationships visually consistent
+  linkStyle 0 stroke:#6a1b9a,stroke-width:2px,color:#111
+  linkStyle 1 stroke:#6a1b9a,stroke-width:2px,color:#111
+  linkStyle 2 stroke:#6a1b9a,stroke-width:2px,color:#111
+  linkStyle 3 stroke:#6a1b9a,stroke-width:2px,color:#111
+  linkStyle 4 stroke:#6a1b9a,stroke-width:2px,color:#111
+  linkStyle 5 stroke:#6a1b9a,stroke-width:2px,color:#111
+  linkStyle 6 stroke:#6a1b9a,stroke-width:2px,color:#111
 ```
 
 ### Granularity Comparison
