@@ -85,73 +85,135 @@ USING DELTA
 LOCATION '{silver_output_path}/sat_company_info';
 """)
 
-# spark.sql(f"""
-# CREATE TABLE IF NOT EXISTS dv_yfinance.hub_time (
-#   Time_HK           STRING NOT NULL,           -- hash(DateTime)
-#   DateTime          TIMESTAMP NOT NULL,         -- business key
-#   Load_DTS          TIMESTAMP NOT NULL,
-#   Record_Source     STRING NOT NULL
-# )
-# USING DELTA
-# LOCATION '{silver_output_path}/hub_time';
-# """)
-
-# spark.sql(f"""
-# CREATE TABLE IF NOT EXISTS dv_yfinance.link_instrument_minute (
-#   Instrument_Minute_LK STRING NOT NULL,    -- hash(Symbol, DateTime)
-#   Instrument_HK        STRING NOT NULL,    -- → hub_instrument
-#   Time_HK              STRING NOT NULL,    -- → hub_time
-#   Load_DTS             TIMESTAMP NOT NULL,
-#   Record_Source        STRING NOT NULL
-# )
-# USING DELTA
-# LOCATION '{silver_output_path}/link_instrument_minute';
-# """)
-
-# spark.sql(f"""
-# CREATE TABLE IF NOT EXISTS dv_yfinance.sat_instrument_minute_prices (
-#   Instrument_Minute_LK STRING   NOT NULL,  -- parent key
-#   Open                 DOUBLE,
-#   High                 DOUBLE,
-#   Low                  DOUBLE,
-#   Close                DOUBLE,
-#   Volume               BIGINT,
-#   Dividends            DOUBLE,
-#   Stock_Splits         DOUBLE,
-#   Hash_Diff            STRING,
-#   Load_DTS             TIMESTAMP NOT NULL,
-#   Effective_DTS        TIMESTAMP NOT NULL,
-#   End_DTS              TIMESTAMP,
-#   Record_Source        STRING NOT NULL
-# )
-# USING DELTA
-# LOCATION '{silver_output_path}/sat_instrument_minute_prices';
-# """)
-
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS dv_yfinance.hub_time (
+  Time_HK           STRING NOT NULL,           -- hash(DateTime)
+  DateTime          TIMESTAMP NOT NULL,         -- business key
+  Load_DTS          TIMESTAMP NOT NULL,
+  Record_Source     STRING NOT NULL
+)
+USING DELTA
+LOCATION '{silver_output_path}/hub_time';
+""")
 
 spark.sql(f"""
-    SHOW CATALOGS
-    """).show()
+CREATE TABLE IF NOT EXISTS dv_yfinance.link_instrument_minute (
+  Instrument_Minute_LK STRING NOT NULL,    -- hash(Symbol, DateTime)
+  Instrument_HK        STRING NOT NULL,    -- → hub_instrument
+  Time_HK              STRING NOT NULL,    -- → hub_time
+  Load_DTS             TIMESTAMP NOT NULL,
+  Record_Source        STRING NOT NULL
+)
+USING DELTA
+LOCATION '{silver_output_path}/link_instrument_minute';
+""")
 
 spark.sql(f"""
-    SHOW DATABASES
-    """).show()
+CREATE TABLE IF NOT EXISTS dv_yfinance.sat_instrument_minute_prices (
+  Instrument_Minute_LK STRING   NOT NULL,  -- parent key
+  Open                 DOUBLE,
+  High                 DOUBLE,
+  Low                  DOUBLE,
+  Close                DOUBLE,
+  Volume               BIGINT,
+  Dividends            DOUBLE,
+  Stock_Splits         DOUBLE,
+  Hash_Diff            STRING,
+  Load_DTS             TIMESTAMP NOT NULL,
+  Effective_DTS        TIMESTAMP NOT NULL,
+  End_DTS              TIMESTAMP,
+  Record_Source        STRING NOT NULL
+)
+USING DELTA
+LOCATION '{silver_output_path}/sat_instrument_minute_prices';
+""")
 
-spark.sql(f"""
-    SHOW SCHEMAS
-    """).show()
+spark.sql("""
+CREATE VIEW IF NOT EXISTS dv_yfinance.instrument_daily_view as
+  SELECT 
+  t.Date,
+  i.Symbol,
+  ci.longName,
+  p.Open,
+  p.Close,
+  CASE WHEN p.Close > p.Open THEN 'up' ELSE 'down' END as Movement,
+  p.High,
+  p.Low,
+  p.High - p.Low AS Intraday_Range,
+  p.Volume
+  FROM dv_yfinance.link_instrument_day lim
+  JOIN dv_yfinance.sat_instrument_day_prices p 
+      ON lim.Instrument_Day_LK = p.Instrument_Day_LK
+  JOIN dv_yfinance.hub_calendar t 
+      ON lim.Calendar_HK = t.Calendar_HK
+  JOIN dv_yfinance.hub_instrument i 
+      ON lim.Instrument_HK = i.Instrument_HK
+  JOIN dv_yfinance.sat_company_info ci
+      ON ci.Instrument_HK = i.Instrument_HK
+  ORDER BY t.Date desc;
+""")
+
+spark.sql("""
+CREATE VIEW IF NOT EXISTS dv_yfinance.instrument_minute_view as
+SELECT 
+  t.DateTime,
+  i.Symbol,
+  ci.longName,
+  p.Open,
+  p.Close,
+  CASE WHEN p.Close > p.Open THEN 'up' ELSE 'down' END as Movement,
+  p.High,
+  p.Low,
+  p.High - p.Low AS Intra_Minute_Range,
+  p.Volume
+  FROM dv_yfinance.link_instrument_minute lim
+  JOIN dv_yfinance.sat_instrument_minute_prices p 
+      ON lim.Instrument_Minute_LK = p.Instrument_Minute_LK
+  JOIN dv_yfinance.hub_time t 
+      ON lim.Time_HK = t.Time_HK
+  JOIN dv_yfinance.hub_instrument i 
+      ON lim.Instrument_HK = i.Instrument_HK
+  JOIN dv_yfinance.sat_company_info ci
+      ON ci.Instrument_HK = i.Instrument_HK
+  ORDER BY t.DateTime desc;
+""")
+# spark.sql(f"""
+#     SHOW CATALOGS
+#     """).show()
+
+# spark.sql(f"""
+#     SHOW DATABASES
+#     """).show()
+
+# spark.sql(f"""
+#     SHOW SCHEMAS
+#     """).show()
 
 spark.sql(f"""
     SHOW TABLES IN {silver_schema}
     """).show()
 
-spark.sql(f"""
-    DESCRIBE TABLE EXTENDED {silver_schema}.sat_company_info
-    """).show()
+# spark.sql(f"""
+#     DESCRIBE TABLE EXTENDED {silver_schema}.sat_company_info
+#     """).show()
 
-spark.sql(f"""
-    SELECT * FROM {silver_schema}.sat_company_info limit 10
-""").show()
+# spark.sql(f"""
+#     SELECT * FROM {silver_schema}.sat_company_info limit 10
+# """).show()
+
+# spark.sql(f"""
+#     SELECT * FROM {silver_schema}.link_instrument_minute limit 10
+# """).show()
+
+# spark.sql(f"""
+#     SELECT * FROM {silver_schema}.sat_instrument_minute_prices limit 10
+# """).show()
+
+# from delta.tables import DeltaTable
+# # show_table_history(output_path_historical)
+# delta_table = DeltaTable.forPath(spark, f"{silver_output_path}/sat_company_info")
+# delta_table.history().show(truncate=False)
+
 
 # spark.sql(f"""
 #     SELECT 

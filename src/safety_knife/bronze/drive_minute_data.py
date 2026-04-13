@@ -18,6 +18,7 @@ save_to_delta(spark_df, path=output_path_minute, partition="Symbol")
 df0 = load_from_delta(output_path_minute, spark=spark)
 df0.show()
 
-spark.sql("""
+spark.sql(f"""
     SELECT * FROM yfinance.minute_historicals
+    WHERE Symbol like '{ticker_symbol}'
 """).show()

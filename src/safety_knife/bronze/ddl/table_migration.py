@@ -80,51 +80,53 @@ spark.sql(f"""
     SHOW TABLES IN yfinance
     """).show()
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT date_check CHECK (Date IS NOT NULL);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT date_check CHECK (Date IS NOT NULL);
+# """)
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT symbol_check CHECK (Symbol IS NOT NULL);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT symbol_check CHECK (Symbol IS NOT NULL);
+# """)
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_open CHECK (Open IS NOT NULL AND Open > 0);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_open CHECK (Open IS NOT NULL AND Open > 0);
+# """)
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_high CHECK (High IS NOT NULL AND High > 0);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_high CHECK (High IS NOT NULL AND High > 0);
+# """)
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_low CHECK (Low IS NOT NULL AND Low > 0);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_low CHECK (Low IS NOT NULL AND Low > 0);
+# """)
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_close CHECK (Close IS NOT NULL AND Close > 0);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_close CHECK (Close IS NOT NULL AND Close > 0);
+# """)
 
 
-spark.sql("""
-    ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_volume CHECK (Volume IS NOT NULL AND Volume > 0);
-""")
+# spark.sql("""
+#     ALTER TABLE yfinance.historicals ADD CONSTRAINT positive_volume CHECK (Volume IS NOT NULL AND Volume > 0);
+# """)
 
-spark.sql(f"""
-    DESCRIBE TABLE EXTENDED yfinance.minute_historicals
-    """).show()
+# spark.sql(f"""
+#     DESCRIBE TABLE EXTENDED yfinance.minute_historicals
+#     """).show()
 
-spark.sql(f"""
-    SHOW TBLPROPERTIES yfinance.minute_historicals
-    """).show()
+# spark.sql(f"""
+#     SHOW TBLPROPERTIES yfinance.minute_historicals
+#     """).show()
+
+
+# spark.sql(f"""
+#     SELECT * FROM yfinance.historicals
+# """).show()
+
+# spark.sql(f"""
+#     SELECT * FROM yfinance.company
+# """).show()
 
 spark.sql(f"""
     SELECT * FROM yfinance.minute_historicals
-""").show()
-
-spark.sql(f"""
-    SELECT * FROM yfinance.historicals
-""").show()
-
-spark.sql(f"""
-    SELECT * FROM yfinance.company
+    where Symbol != 'VET.TO'
 """).show()
