@@ -13,8 +13,8 @@ from azure.identity import ClientSecretCredential
 from azure.storage.filedatalake import DataLakeServiceClient
 
 credential = ClientSecretCredential(
-    tenant_id="a65e0f8e-36fb-4683-ae3b-364611bdab10",
-    client_id="048fb0e7-82c6-4ab8-82c8-b006988c5acb",
+    tenant_id="",
+    client_id="",
     client_secret= os.environ.get("AZURE_CLIENT_SECRET")
 )
 
