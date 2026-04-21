@@ -1,5 +1,7 @@
-DATA_DIR = 'data/bronze'
-SILVER_DATA_DIR = 'data/silver'
+import os
+
+DATA_DIR = "data/bronze"
+SILVER_DATA_DIR = "data/silver"
 ticker_symbol = "VET.TO"
 #   | Valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
 #   | Default: 1mo
@@ -9,9 +11,29 @@ ticker_symbol = "VET.TO"
 #   | Intraday data cannot extend last 60 days
 period='5y' #1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
 minute_period = '5d'
-output_path = f"/Users/michaeltsumura/Workspace/safety-knife/{DATA_DIR}"
+
+# --- Bronze Delta base path (local or ADLS Gen2 abfss://...) ---
+# Local example:
+#   BRONZE_DELTA_BASE=/Users/.../Workspace/safety-knife/data/bronze
+# Azure example:
+#   BRONZE_DELTA_BASE=abfss://<container>@<account>.dfs.core.windows.net/bronze
+BRONZE_DELTA_BASE = os.environ.get(
+    "BRONZE_DELTA_BASE",
+    "/Users/michaeltsumura/Workspace/safety-knife/data/bronze",
+).rstrip("/")
+
+output_path = BRONZE_DELTA_BASE
 output_path_historical = f"{output_path}/historicals"
 output_path_minute = f"{output_path}/historicals_minute"
-company_output_path = f"{output_path}/company"  
-silver_output_path = f"/Users/michaeltsumura/Workspace/safety-knife/{SILVER_DATA_DIR}/vault"
-hive_warehouse_dir = "file:/Users/michaeltsumura/Workspace/safety-knife/spark-warehouse"
+company_output_path = f"{output_path}/company"
+
+silver_output_path = os.environ.get(
+    "SILVER_DELTA_BASE",
+    "/Users/michaeltsumura/Workspace/safety-knife/data/silver/vault",
+).rstrip("/")
+
+# If you use a remote metastore later, change this too.
+hive_warehouse_dir = os.environ.get(
+    "SPARK_WAREHOUSE_DIR",
+    "file:/Users/michaeltsumura/Workspace/safety-knife/spark-warehouse",
+)
