@@ -5,8 +5,7 @@ from safety_knife.bronze.store_data import load_from_delta, show_table_history, 
 # print(df0.count())
 # df0.show()
 
-# show_table_history(output_path_historical)
-show_table_history(company_output_path)
+
 
 spark = get_or_create_spark_session(app_name="qa_bronze")
 

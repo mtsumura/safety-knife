@@ -12,6 +12,6 @@ def retrieve_minute_data(ticker_symbol) -> DataFrame:
     df = store_minute_historicals(ticker_symbol)
     return df
 
-df = retrieve_minute_data(ticker_symbol=ticker_symbol)
-print(df)
+# df = retrieve_minute_data(ticker_symbol=ticker_symbol)
+# print(df)
 # print(info)

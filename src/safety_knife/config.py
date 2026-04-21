@@ -12,6 +12,6 @@ minute_period = '5d'
 output_path = f"/Users/michaeltsumura/Workspace/safety-knife/{DATA_DIR}"
 output_path_historical = f"{output_path}/historicals"
 output_path_minute = f"{output_path}/historicals_minute"
-company_output_path = f"{output_path}/company"
+company_output_path = f"{output_path}/company"  
 silver_output_path = f"/Users/michaeltsumura/Workspace/safety-knife/{SILVER_DATA_DIR}/vault"
 hive_warehouse_dir = "file:/Users/michaeltsumura/Workspace/safety-knife/spark-warehouse"

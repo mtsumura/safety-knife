@@ -1,51 +1,73 @@
-import os
 import json
+from io import BytesIO, StringIO
+
 import yfinance as yf
 from pandas import DataFrame
 import pandas as pd
-from safety_knife.config import DATA_DIR, period, output_path, output_path_minute, minute_period
+from safety_knife.bronze.storage import get_bronze_raw_backend
+from safety_knife.config import period, minute_period
 
-def _store_historicals(ticker_symbol: str, output_path: str, period: str, interval: str) -> DataFrame:
-    # Check if output directory exists, if not create it
-    if not os.path.exists(output_path):
+
+def _csv_key(ticker_symbol: str, *, kind: str) -> str:
+    # Keep a stable object layout across local and Azure.
+    # Example: VET.TO/historical/daily.csv
+    if kind == "daily":
+        return f"{ticker_symbol}/historical/daily.csv"
+    if kind == "minute":
+        return f"{ticker_symbol}/historical_minute/minute.csv"
+    raise ValueError(f"Unknown csv kind: {kind!r}")
+
+
+def _info_key(ticker_symbol: str) -> str:
+    return f"{ticker_symbol}/info/meta.json"
+
+
+def _store_historicals(ticker_symbol: str, *, period: str, interval: str, key: str) -> DataFrame:
+    backend = get_bronze_raw_backend()
+
+    if not backend.exists(key):
         dat = yf.Ticker(ticker_symbol)
         df = dat.history(period=period, interval=interval)
 
         df = df.reset_index()  # moves index into a column named 'Date'
         print(df.columns.tolist())  # now includes 'Date'
         print(df)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        df.to_csv(output_path)
-        print(f"Data fetched and saved to {output_path}")
+
+        buf = StringIO()
+        df.to_csv(buf, index=False)
+        backend.write_bytes(key, buf.getvalue().encode("utf-8"), content_type="text/csv")
+        print(f"Data fetched and saved to {key}")
         return df
     else:
-        df = DataFrame(pd.read_csv(output_path))
+        raw = backend.read_bytes(key)
+        df = DataFrame(pd.read_csv(BytesIO(raw)))
         return df
+
 
 def store_daily_historicals(ticker_symbol: str) -> DataFrame:
     interval = '1d'
-    daily_output_path = f"{output_path}/{ticker_symbol}/historical/daily.csv"
-    return _store_historicals(ticker_symbol, daily_output_path, period, interval)
+    key = _csv_key(ticker_symbol, kind="daily")
+    return _store_historicals(ticker_symbol, period=period, interval=interval, key=key)
 
 def store_minute_historicals(ticker_symbol: str) -> DataFrame:
     interval = '1m'
-    minute_output_path = f"{output_path_minute}/{ticker_symbol}/historical_minute/minute.csv"
-    return _store_historicals(ticker_symbol, minute_output_path, minute_period, interval)
+    key = _csv_key(ticker_symbol, kind="minute")
+    return _store_historicals(ticker_symbol, period=minute_period, interval=interval, key=key)
                               
 def store_info(ticker_symbol: str) -> dict:
-    info_output_path = f"{DATA_DIR}/{ticker_symbol}/info/meta.json"
-    if not os.path.exists(info_output_path):
+    backend = get_bronze_raw_backend()
+    key = _info_key(ticker_symbol)
+
+    if not backend.exists(key):
         dat = yf.Ticker(ticker_symbol)
         info = dat.info
         print(info)
-        os.makedirs(os.path.dirname(info_output_path), exist_ok=True)
-        with open(info_output_path, 'w') as f:
-            json.dump(info, f)
-        print(f"Info data fetched and saved to {info_output_path}")
+        backend.write_bytes(key, json.dumps(info).encode("utf-8"), content_type="application/json")
+        print(f"Info data fetched and saved to {key}")
 
         return info
     else:
-        info = json.load(open(info_output_path, 'r'))
+        info = json.loads(backend.read_bytes(key).decode("utf-8"))
         return info
 
 
