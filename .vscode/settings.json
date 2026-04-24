@@ -1,3 +1,5 @@
 {
-  "python.defaultInterpreterPath": "/Users/michaeltsumura/Library/Caches/pypoetry/virtualenvs/safety-knife-ZAaB8whN-py3.14/bin/python"
+  "python.defaultInterpreterPath": "/Users/michaeltsumura/Library/Caches/pypoetry/virtualenvs/safety-knife-ZAaB8whN-py3.14/bin/python",
+  "python-envs.defaultEnvManager": "ms-python.python:poetry",
+  "python-envs.defaultPackageManager": "ms-python.python:poetry"
 }

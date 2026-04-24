@@ -2,6 +2,9 @@ from pyspark.sql import functions as F
 from pyspark.sql import types as T
 from safety_knife.spark_utils import get_or_create_spark_session
 
+from dotenv import load_dotenv
+load_dotenv()
+
 def main() -> None:
     spark = get_or_create_spark_session(app_name="silver_analysis")
 #     spark.sql(f"""

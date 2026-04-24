@@ -2,3 +2,4 @@ data/
 metastore_db/
 src/safety_knife/__pycache__/
 derby.log
+*.pyc

@@ -4,6 +4,9 @@ from safety_knife.bronze.store_data import load_to_spark, save_to_delta, load_fr
 from safety_knife.bronze.wrangle_data import rename_stock_splits_column, convert_date_column, add_symbol_column, prepare_data, add_price_to_earnings_column, rename_column, prepare_company_data
 import pandas as pd
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Create a single Spark session with Delta support for this entire script
 spark = get_or_create_spark_session(app_name="bronze_etl_drive")
 
@@ -59,13 +62,13 @@ def populate_yfinance_historicals_delta(spark, pd_df):
     df0.show()
 
 # Call the function with the retrieved info
-# populate_yfinance_company_delta(spark, info)
-# print(company_output_path)
-# spark.sql("""
-#     SELECT * FROM yfinance.company
-# """).show()
-
-populate_yfinance_historicals_delta(spark, pd_df)
+populate_yfinance_company_delta(spark, info)
+print(company_output_path)
 spark.sql("""
-    SELECT * FROM yfinance.historicals
+    SELECT * FROM yfinance.company
 """).show()
+
+# populate_yfinance_historicals_delta(spark, pd_df)
+# spark.sql("""
+#     SELECT * FROM yfinance.historicals
+# """).show()
